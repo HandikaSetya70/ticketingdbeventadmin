@@ -61,7 +61,7 @@ export default async function handler(req, res) {
     }
 
     // Check if the user is an event admin
-    if (userData.role !== 'event_admin') {
+    if (userData.role !== 'admin') {
       return res.status(403).json({
         status: 'error',
         message: 'Unauthorized. Event admin access required.'
