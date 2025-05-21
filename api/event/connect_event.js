@@ -39,16 +39,37 @@ export default async function handler(req, res) {
     }
 
     // Check if user already connected to the event
+    // Check if user already exists in event_admins (regardless of event)
     const { data: existingEntry, error: lookupError } = await supabase
       .from('event_admins')
       .select('id')
       .eq('auth_id', user.id)
-      .eq('event_id', event_id)
       .single();
 
-    if (existingEntry) {
-      return res.status(409).json({ status: 'error', message: 'User already connected to this event' });
+    if (lookupError && lookupError.code !== 'PGRST116') {
+      return res.status(500).json({ status: 'error', message: 'Error checking existing event admin entry', error: lookupError.message });
     }
+
+    if (existingEntry) {
+      // Update the existing entry with new event_id
+      const { data: updated, error: updateError } = await supabase
+        .from('event_admins')
+        .update({ event_id, permission_level })
+        .eq('id', existingEntry.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        return res.status(500).json({ status: 'error', message: 'Failed to update event admin entry', error: updateError.message });
+      }
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Event admin entry updated with new event',
+        data: updated
+      });
+    }
+
 
     // Lookup user_id from users table
     const { data: userProfile, error: userError } = await supabase
